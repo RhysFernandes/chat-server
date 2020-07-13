@@ -1,0 +1,43 @@
+Setup server to run: "make server"
+
+Run: "./server {port}"
+
+Clean: "make clean"
+
+
+----------------------------------------------------------------------------------
+Currently done: 
+- Port configurable when server.exe file runs
+- Server is setup.
+- Multiple clients can connect, disconnect, and send messages.
+- Clients are informed of users joining and leaving.
+- If problems with client messages, the server send ERRORs with some information. The server also outputs same client error which should be considered as logging.
+
+
+
+To do: 
+
+- Remove room from rooms
+- Proper error checking.
+- More testing.
+- Locks are needed for threading.
+- Set boundary limits for users to what the system can handle.
+- More error results to client would be nice.
+
+-Nice to have:
+	- Create testfile to test functions/methods.
+
+Things to consider:
+	Clients with the same username? Probably should not be allowed.
+
+
+
+---------------------------------------------------------------------------------
+Testing:
+
+- Scenario: 2 Users Join, send some messages and 1 leaves
+	- Connect: telnet localhost 1234
+	- User1: JOIN lordoftherings Bilbobaggins
+	- User2: JOIN lordoftherings Hobbit
+	- Messages occur
+	- User1 or User2 disconnects: 'Ctrl ]' + quit (in this order to exit telnet).
