@@ -9,7 +9,7 @@ void error (const char * msg) {
     exit(1);
 }
 
-Server::ServerThread::ServerThread (
+ServerThread::ServerThread (
     int client_sockfd,
     struct sockaddr_in client_addr,
     socklen_t client_len
@@ -19,11 +19,34 @@ Server::ServerThread::ServerThread (
     buffer = new char[max_buffer_size];
 }
 
-Server::ServerThread::~ServerThread () {
-
+ServerThread::ServerThread (const ServerThread & other) {
+    client = other.client;
+    // max_buffer_size (other.max_buffer_size);
+    buffer = new char[max_buffer_size];
+    memcpy (buffer, other.buffer, sizeof (char) * max_buffer_size);
 }
 
-bool Server::ServerThread::validate_name (const char *name) {
+const ServerThread & ServerThread::operator= (const ServerThread & other) {
+
+    if(&other == this){
+        return *this;
+    }
+
+    client = other.client;
+
+    //
+    // No need to delete if size is the same, just copy over.
+    //
+    memcpy (buffer, other.buffer, sizeof (char) * max_buffer_size);
+    return *this;
+}
+
+
+ServerThread::~ServerThread () {
+    delete[] buffer;
+}
+
+bool ServerThread::validate_name (const char *name) {
     //
     // Loop through string characters and consider valid visible
     // ASCII characters within the range 0 - 127.
@@ -39,16 +62,15 @@ bool Server::ServerThread::validate_name (const char *name) {
 //
 // Respond to Client requests that come in
 //
-void Server::ServerThread::operator () (
+void ServerThread::operator () (
     std::function <std::shared_ptr<Room>
         (std::string name, std::shared_ptr<Client> client)
     > roomHandler
 ) {
 
 
-
     int n = read(this->client->get_sockfd(), this->buffer, this->max_buffer_size);
-
+    std::cout << n << std::endl;;
     if (n < 0) error ("ERROR reading from socket");
 
     //
@@ -75,16 +97,16 @@ void Server::ServerThread::operator () (
         return;
     }
 
-    buffer[n] = '\0';
+    this->buffer[n] = '\0';
 
     //std::cout << "Command received: " << buffer;
     std::stringstream sstream;
-    sstream << buffer;
+    sstream << this->buffer;
 
     std::vector<std::string> words;
     std::string word;
     while (sstream >> word) {
-        words.push_back(std::move(word));
+        words.push_back (std::move(word));
     }
 
     // Validate JOIN command.
@@ -98,7 +120,7 @@ void Server::ServerThread::operator () (
             msg.length ()
         );
 
-        close(this->client->get_sockfd ());
+        close (this->client->get_sockfd ());
         return;
     }
 
@@ -119,7 +141,7 @@ void Server::ServerThread::operator () (
             msg.length ()
         );
 
-        close(this->client->get_sockfd ());
+        close (this->client->get_sockfd ());
         return;
     }
 
@@ -171,7 +193,7 @@ void Server::ServerThread::operator () (
     }
 }
 
-Server::Server (int port) : port (std::make_unique<int>(port)) {
+Server::Server (int port) : port (port) {
 
 }
 
@@ -190,7 +212,7 @@ void Server::start_server () {
 
     this->server_addr.sin_family = AF_INET;
     this->server_addr.sin_addr.s_addr = INADDR_ANY;
-    this->server_addr.sin_port = htons (*this->port);
+    this->server_addr.sin_port = htons (this->port);
     this->server_len = sizeof (this->server_addr);
 
     if (
@@ -234,7 +256,7 @@ void Server::start_server () {
         // Spawn a server_thread for each client to
         // handle ongoing connections.
         //
-        ServerThread server = ServerThread(
+        ServerThread server (
             this->client_sockfd,
             this->client_addr,
             this->client_len
@@ -269,27 +291,40 @@ void Server::start_server () {
         };
 
         std::thread server_thread (server, std::ref(roomHandler));
+
+        //
+        // Keep threads in scope or else will terminate
+        //
         serverThreads.push_back(std::move(server_thread));
 
+
         // Nice to have a way to exit server nicely along with threads
-        // server_thread.join();
+        // if (serverThreads.size () == 2) break;
 
         std::cout << "Success" << std::endl;
     }
-
+    //
+    // Close of threads. This is for testing.
+    //
+    for (auto & sthread : serverThreads){
+        sthread.join();
+    }
 
 }
 
 
-int main(int argc, char *argv[]){
-    int port = 1234;
-    if (argc > 3){
-        std::cout << "Invalid arguments" << std::endl;
-    }else if (argc == 2){
-        port = atoi(argv[1]);
-    }
+    int main(int argc, char *argv[]){
+        int port = 1234;
+        if (argc >= 3){
+            error("Invalid arguments");
+        }else if (argc == 2){
+            port = atoi(argv[1]);
+            if (port > 65535 || port < 0){
+                error("Port is not within correct range 0 - 65535");
+            }
+        }
 
-    Server chat_server = Server(port);
-    chat_server.start_server();
+        Server chat_server = Server(port);
+        chat_server.start_server();
 
 }
