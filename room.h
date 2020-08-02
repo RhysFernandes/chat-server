@@ -16,8 +16,8 @@ class Room {
         bool add_client (std::shared_ptr<Client> new_client);
         void remove_client (std::shared_ptr<Client> client);
 
-
         std::string get_name ();
+        int get_room_size();
 
         void message_client (
             std::shared_ptr<Client> new_client,

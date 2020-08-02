@@ -70,9 +70,12 @@ bool ServerThread::validate_name (const char *name) {
 // Respond to Client requests that come in
 //
 void ServerThread::operator () (
-    std::function <std::shared_ptr<Room>
-        (std::string name, std::shared_ptr<Client> client)
-    > roomHandler
+    std::function <std::shared_ptr <Room>
+        (std::string name, std::shared_ptr <Client> client)
+    > roomHandler,
+    std::function <bool
+        (std::shared_ptr <Room>)
+    > roomRemoveHandler
 ) {
 
     int n;
@@ -117,7 +120,6 @@ void ServerThread::operator () (
 
     msg_buffer[msg_length] = '\0';
 
-    //std::cout << "Command received: " << buffer;
     std::stringstream sstream;
     sstream << msg_buffer;
 
@@ -197,7 +199,11 @@ void ServerThread::operator () (
                 room->send_message (this->client, msg);
 
                 close(this->client->get_sockfd ());
+
                 room->remove_client (this->client);
+                if (room->get_room_size () == 0) {
+                    roomRemoveHandler (room);
+                }
 
                 return;
             }
@@ -213,9 +219,12 @@ void ServerThread::operator () (
         // Client disconnects
         //
         if (msg_length == 0) {
+            // Cleanup
             room->remove_client (this->client);
+            if (room->get_room_size () == 0) {
+                roomRemoveHandler (room);
+            }
 
-            // To-do: Get rid of room is needed.
             return;
         }
 

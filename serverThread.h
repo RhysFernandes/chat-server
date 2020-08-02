@@ -38,9 +38,12 @@ class ServerThread {
         ~ServerThread ();
 
         void operator () (
-            std::function <std::shared_ptr<Room> (
-                    std::string name,
-                    std::shared_ptr<Client> client)
-                > roomHandler
+            std::function <std::shared_ptr <Room>
+                (std::string name,
+                std::shared_ptr <Client> client)
+            > roomHandler,
+            std::function <bool
+                (std::shared_ptr <Room>)
+            > roomRemoveHandler
         );
 };

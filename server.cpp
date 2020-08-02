@@ -1,6 +1,6 @@
 #include <iostream>
 #include <unistd.h>
-
+#include <algorithm>
 #include "server.h"
 
 void error (const char * msg) {
@@ -96,22 +96,38 @@ void Server::start_server () {
                 room =
                     std::make_shared<Room> (name, client);
 
-                this->rooms.push_back(room);
+                this->rooms.push_back (room);
             }
             else {
-                if (! room->add_client(client)) {
+                if (! room->add_client (client)) {
                     std::cerr << "ERROR: could not add client to room" << std::endl;
                 }
             }
             return room;
         };
 
-        std::thread server_thread (server, std::ref(roomHandler));
+        auto roomRemoveHandler = [this] (
+            std::shared_ptr <Room> room
+        ) -> bool {
+            this->rooms.erase (
+                std::remove_if (
+                    this->rooms.begin (),
+                    this->rooms.end (),
+                    [&] (auto const & c_room) {
+                        std::cout << "Does this work?: " <<  (room == c_room) << std::endl;
+                        return (room == c_room);
+                    }
+                ),
+                this->rooms.end ()
+            );
+        };
+
+        std::thread server_thread (server, std::ref (roomHandler), std::ref (roomRemoveHandler));
 
         //
         // Keep threads in scope or else will terminate
         //
-        serverThreads.push_back(std::move(server_thread));
+        serverThreads.push_back (std::move (server_thread));
 
 
         // Nice to have a way to exit server nicely along with threads
@@ -123,24 +139,23 @@ void Server::start_server () {
     // Close of threads. This is for testing.
     //
     for (auto & sthread : serverThreads){
-        sthread.join();
+        sthread.join ();
     }
 
 }
 
 
-    int main(int argc, char *argv[]){
-        int port = 1234;
-        if (argc >= 3){
-            error("Invalid arguments");
-        }else if (argc == 2){
-            port = atoi(argv[1]);
-            if (port > 65535 || port < 0){
-                error("Port is not within correct range 0 - 65535");
-            }
+int main(int argc, char *argv[]){
+    int port = 1234;
+    if (argc >= 3){
+        error("Invalid arguments");
+    }else if (argc == 2){
+        port = atoi(argv[1]);
+        if (port > 65535 || port < 0){
+            error("Port is not within correct range 0 - 65535");
         }
+    }
 
-        Server chat_server = Server(port);
-        chat_server.start_server();
-
+    Server chat_server = Server(port);
+    chat_server.start_server();
 }

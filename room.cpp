@@ -18,6 +18,10 @@ std::string Room::get_name () {
     return name;
 }
 
+int Room::get_room_size () {
+    return this->clients.size ();
+}
+
 bool Room::add_client(std::shared_ptr <Client> new_client){
     for (auto &client : clients) {
         //
@@ -39,7 +43,7 @@ bool Room::add_client(std::shared_ptr <Client> new_client){
 
 void Room::remove_client (std::shared_ptr <Client> client) {
     this->clients.erase (
-            std::remove (
+        std::remove (
             this->clients.begin(),
             this->clients.end(),
             client
